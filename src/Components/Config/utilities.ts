@@ -1,33 +1,16 @@
 type Spec = { [key: string]: Spec } | Spec[] | string;
 
-/** Recursively checks a given type against a specification */
-export function check_complete(
+export function check_object(
 	value: /*eslint-disable @typescript-eslint/no-explicit-any*/ any,
 	spec: Spec
 ): boolean {
 	if (typeof spec === 'string' && typeof value === spec) return true;
 	if (Array.isArray(value) && Array.isArray(spec))
-		return value.every((v, i) => check_complete(v, spec[i]));
-	if (typeof value === 'object' && typeof spec === 'object')
-		return (
-			Object.keys(value).every((key) => key in spec) &&
-			Object.keys(spec).every((key) => key in value) &&
-			check_complete(Object.values(value), Object.values(spec))
-		);
-	return false;
-}
-
-export function check_partial(
-	value: /*eslint-disable @typescript-eslint/no-explicit-any*/ any,
-	spec: Spec
-): boolean {
-	if (typeof spec === 'string' && typeof value === spec) return true;
-	if (Array.isArray(value) && Array.isArray(spec))
-		return value.every((v, i) => check_partial(v, spec[i]));
+		return value.every((v, i) => check_object(v, spec[i]));
 	if (typeof value === 'object' && typeof spec === 'object')
 		return (
 			Object.keys(spec).every((key) => key in value) &&
-			check_partial(
+			check_object(
 				Object.keys(spec).map((key) => value[key]),
 				Object.values(spec)
 			)

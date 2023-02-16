@@ -1,10 +1,10 @@
 <script context="module" lang="ts">
-	import { check_complete } from "./utilities";
+	import { check_object } from "./utilities";
 
   export type IconToggleType = {name: string, on: string, off: string, val: boolean, style?: string};
   export function isIconToggle(value: any): value is IconToggleType {
     const spec = {name: 'string', on: 'string', off: 'string', val: 'boolean'}
-    return check_complete(value, spec)
+    return check_object(value, spec)
   }
 </script>
 
@@ -14,7 +14,7 @@
 
 <label {style}>
   <input type="checkbox" bind:checked={val}>
-  <img src={val?off:on} alt="{name}: {val?'off':'on'}" />
+  <img src={val?off:on} alt="{name}:{val?'off':'on'}" />
 </label>
 
 <style>

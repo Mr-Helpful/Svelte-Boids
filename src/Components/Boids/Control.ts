@@ -32,17 +32,21 @@ export type ConfigSettings = {
 
 export type ControlSettings = ConstantSettings & ConfigSettings;
 
+export function initialise(constants: ConstantSettings): BoidData[] {
+	const { min_vel: s, max_vel: e, dims, N } = constants;
+	return new Array(N).fill(0).map(() => ({
+		s: V.random([0, 0], dims),
+		v: V.lim(V.random([-e, -e], [e, e]), s, e),
+		a: [0, 0]
+	}));
+}
+
 export function step(boids: BoidData[], steps: number, settings: ControlSettings) {
 	// console.log(settings.align_weight);
 	return boids.map((b) => update(b, boids, settings)).map((b) => move(b, steps, settings));
 }
 
-/** Updates the acceleration for a single boid
- * @param {Object} boid - a single boid object
- * @param {Array} boids - all other boids
- * @param {Vector} t - a position to target
- * @return {Object} - the boid with its acceleration updated
- */
+/** Updates the acceleration for a single boid */
 function update(boid: BoidData, boids: BoidData[], settings: ControlSettings) {
 	const [near, seen] = select(boid, boids, settings);
 	// we bind all the common variables to be used in finding an acceleration

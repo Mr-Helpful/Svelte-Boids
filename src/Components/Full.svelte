@@ -35,5 +35,5 @@
   }
 </script>
 
-<Config bind:settings={config} />
+<Config bind:config />
 <Boids {constants} {config} />

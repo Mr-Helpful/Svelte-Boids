@@ -1,18 +1,18 @@
 <script context="module" lang="ts">
-	import { check_complete } from "./utilities";
+	import { check_object } from "./utilities";
 
-  export type TextSwitchType = {name: string, val: boolean};
+  export type TextSwitchType = {name: string, val: boolean, style?: string};
   export function isTextSwitch(value: any): value is TextSwitchType {
     const spec = {name: 'string', val: 'boolean'}
-    return check_complete(value, spec)
+    return check_object(value, spec)
   }
 </script>
 
 <script lang="ts">
-  export let name: string, val: boolean;
+  export let name: string, val: boolean, style: string = '';
 </script>
 
-<label>
+<label {style}>
   <input type="checkbox" bind:checked={val}>
   <div>{name}</div>
 </label>

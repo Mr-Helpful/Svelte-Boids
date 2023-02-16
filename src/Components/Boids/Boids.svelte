@@ -1,33 +1,25 @@
 <script lang="ts">
-	// import { onMount } from "svelte";
-	import { step, type BoidData, type ConstantSettings, type ConfigSettings, type ControlSettings, type ConfigOf } from "./Control";
-  import * as V from './Vector'
+	import { initialise, step, type BoidData, type ConstantSettings, type ConfigSettings, type ConfigOf } from "./Control";
+  import type { Vec } from './Vector'
 	import Boid from "./Boid.svelte";
 	import { onMount } from "svelte";
-	import { extractValues } from "../utilities";
-
-  type BoidSettings = Omit<ControlSettings, 'dims'|'target'> & {
-    playback: {tick: Promise<() => number>, reset: () => void}
-  };
+	import { extractValues } from "./utilities";
 
   export let
     constants: Omit<ConstantSettings, 'dims'|'target'>,
     config: ConfigOf<ConfigSettings>;
 
-  let dims: V.Vec = [0, 0]
-  let target: V.Vec = [0, 0]
+  let dims: Vec = [0, 0]
+  let target: Vec = [0, 0]
   let boids: BoidData[] = []
-  function init_boids(N: number, dims: V.Vec): BoidData[] {
-    let {min_vel: s, max_vel: e} = constants
-    return new Array(N).fill(0).map(_ => ({
-      s: V.random([0, 0], dims),
-      v: V.lim(V.random([-e, -e], [e, e]), s, e),
-      a: [0, 0]
-    }))
+
+  /** We wrap the initialisation function to only update on changes to N */
+  function init_boids(N: number, constants: Omit<ConstantSettings, 'N'|'dims'|'target'>): BoidData[] {
+    return initialise({dims, target, N, ...constants})
   }
 
-  $: boids = init_boids(constants.N, dims)
-  config.playback.val.reset = () => boids = init_boids(constants.N, dims)
+  $: boids = init_boids(constants.N, constants)
+  config.playback.val.reset = () => boids = init_boids(constants.N, constants)
 
   /** An animation loop for all boids in the svg */
   async function boids_loop() {

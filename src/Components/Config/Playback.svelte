@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-  import { check_partial, perf_timer, wait } from "./utilities"
+  import { check_object, perf_timer, wait } from "./utilities"
 
   export type PlaybackType = {
     name: string,
@@ -8,12 +8,13 @@
     val: {
       tick: Promise<() => number>,
       reset: () => void,
-      playing: boolean,
-    }
+      playing?: boolean,
+    },
+    style?: string
   }
   export function isPlayback(value: any): value is PlaybackType {
-    const spec = {name: 'string', fps: 'number'}
-    return check_partial(value, spec)
+    const spec = {name: 'string', fps: 'number', val: {tick: 'object', reset: 'function'}}
+    return check_object(value, spec)
   }
 </script>
 
@@ -43,7 +44,12 @@
     name: string,
     fps: number,
     avg_over: number = 10,
-    val: PlaybackType['val'];
+    val: PlaybackType['val'],
+    style: string = '';
+
+  // there's probably a better way of providing optional binding, but this works
+  let playing = val.playing ?? false
+  $: val.playing = playing
 
   let tick_resolve: (f: () => number) => void = f => {}
   /** Extracts the resolver from a promise, allowing it to be called later */
@@ -70,17 +76,19 @@
 
   /* The main loop for the tick handler, updates fps times per second */
   async function loop() {
-    timer.reset()
-    while(val.playing) {
+    do {
       update_tick()
       await wait(1000 / fps)
-    }
+    } while(playing)
   }
-  $: if(val.playing) loop()
+  $: if(playing) {
+    timer.reset()
+    loop()
+  }
 </script>
 
-<div>
-  <IconToggle name="{name}:Play" on={Play} off={Pause} bind:val={val.playing} />
+<div {style}>
+  <IconToggle name="{name}:Play" on={Play} off={Pause} bind:val={playing} />
   <IconButton name="{name}:Step" src={Step} onclick={() => {tick_resolve(() => {
     val.tick = split_promise()
     return 1

@@ -1,10 +1,10 @@
 <script context="module" lang="ts">
-	import { check_complete } from "./utilities";
+	import { check_object } from "./utilities";
 
   export type IconSwitchType = {name: string, src: string, val: boolean, style?: string}
   export function isIconSwitch(value: any): value is IconSwitchType {
     const spec = {name: 'string', src: 'string', val: 'boolean'}
-    return check_complete(value, spec)
+    return check_object(value, spec)
   }
 </script>
 

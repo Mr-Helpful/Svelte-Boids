@@ -1,10 +1,10 @@
 <script context="module" lang="ts">
-	import { check_complete } from "./utilities";
+	import { check_object } from "./utilities";
 
   export type TextInputType = {name: string, val: string, style?: string};
   export function isTextInput(value: any): value is TextInputType {
     const spec = {name: 'string', val: 'string'};
-    return check_complete(value, spec)
+    return check_object(value, spec)
   }
 </script>
 

@@ -1,10 +1,10 @@
 <script context="module" lang="ts">
-	import { check_partial, enter_pressed } from "./utilities";
+	import { check_object, enter_pressed } from "./utilities";
 
   export type IconButtonType = {name: string, src: string, onclick: () => void, style?: string}
   export function isIconButton(value: any): value is IconButtonType {
     const spec = {name: 'string', src: 'string', onclick: 'function'}
-    return check_partial(value, spec)
+    return check_object(value, spec)
   }
 </script>
 

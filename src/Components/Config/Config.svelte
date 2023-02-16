@@ -23,7 +23,7 @@
 	import IconButton, { isIconButton } from "./IconButton.svelte";
 	import Playback, { isPlayback } from "./Playback.svelte";
 
-  export let settings: {[k: string]: ConfigEntry} = {};
+  export let config: {[k: string]: ConfigEntry} = {};
 </script>
 
 <label class='tabs'>
@@ -33,7 +33,7 @@
 </label>
 <div class='controls'>
   <div id='title'>Controls</div>
-  {#each Object.values(settings) as setting}
+  {#each Object.values(config) as setting}
     <div class='control'>
     {#if isSlider(setting)}
       <Slider {...setting} bind:val={setting.val} />
@@ -60,7 +60,6 @@
   /***************************/
   /* Formatting the controls */
   /***************************/
-
   .controls {
     /*we want to force our menu onto the right of the screen*/
     position: fixed;
@@ -91,7 +90,6 @@
   /*******************************/
   /* Showing and hiding the menu */
   /*******************************/
-
   .tabs>input~*,
   .controls {
     transform: translate(0px, 0);

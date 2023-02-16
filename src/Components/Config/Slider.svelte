@@ -1,10 +1,10 @@
 <script context="module" lang="ts">
-	import { check_complete, check_partial } from "./utilities";
+	import { check_object } from "./utilities";
 
-  export type SliderType = {name: string, range: [number, number], steps?: number, val: number};
+  export type SliderType = {name: string, range: [number, number], steps?: number, val: number, style?: string};
   export function isSlider(value: any): value is SliderType {
     const spec = {name: 'string', range: ['number', 'number'], val: 'number'}
-    return check_partial(value, spec) && value.range[0] < value.range[1]
+    return check_object(value, spec) && value.range[0] < value.range[1]
   }
 </script>
 
@@ -13,10 +13,11 @@
     name: string,
     range: [number, number],
     steps: number = 100,
-    val: number
+    val: number,
+    style: string = ''
 </script>
 
-<label>
+<label {style}>
   <div>{name}</div>
   <input type="range" max={steps} on:change={ev => {
     const frac = parseInt(ev.currentTarget.value) / steps

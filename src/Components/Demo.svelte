@@ -22,4 +22,4 @@
   }
 </script>
 
-<Config bind:settings={config} />
+<Config bind:config />

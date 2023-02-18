@@ -4,7 +4,7 @@ function swap<T>(xs: T[], i: number, j: number) {
 	xs[j] = t;
 }
 
-export const MaxHeap = class MaxHeap<Item> {
+export class MaxHeap<Item> {
 	constructor(private _comp: (item: Item) => number, public _heap: Item[] = []) {
 		if (this._heap.length > 0) {
 			this._make_max_heap();
@@ -84,4 +84,8 @@ export const MaxHeap = class MaxHeap<Item> {
 		if (this.length > 0) this._max_heapify(0);
 		return max;
 	}
-};
+
+	items() {
+		return [...this._heap];
+	}
+}

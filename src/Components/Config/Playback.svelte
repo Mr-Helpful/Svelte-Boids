@@ -19,11 +19,11 @@
 </script>
 
 <script lang="ts">
-  import Play from "../../_icons/Play.png"
-  import Step from "../../_icons/Skip.png"
-  import Time from "../../_icons/Time.png"
-  import Pause from "../../_icons/Pause.png"
-  import Reload from "../../_icons/Reload.png"
+  import Play from "../../icons/Play.png"
+  import Step from "../../icons/Skip.png"
+  import Time from "../../icons/Time.png"
+  import Pause from "../../icons/Pause.png"
+  import Reload from "../../icons/Reload.png"
 	import IconToggle from "./IconToggle.svelte"
 	import IconButton from "./IconButton.svelte"
 	import IconSwitch from "./IconSwitch.svelte"

@@ -2,7 +2,9 @@
 	import Boids from "./Boids/Boids.svelte";
   import Config from "./Config/Config.svelte";
 
-  let constants = {
+  // TODO: try to provide config for as many of these as possible
+  // perhaps if its a bit visually cluttered, hide them in an `advanced` section
+  const constants = {
     min_vel: 30,
     max_vel: 50,
     max_acc: 30,
@@ -11,7 +13,6 @@
     avoid_radius: 20,
     words_weight: 20,
     colour: "#ccc",
-    playing: true,
     N: 100
   }
 
@@ -26,7 +27,7 @@
     use_edges: {name: 'Edges', val: true},
     use_mouse: {name: 'Mouse', val: false},
     use_words: {name: 'Words', val: false},
-    word_input: {name: 'Word to draw', val: ''},
+    word_input: {name: 'Words to draw', val: ''},
     playback: {name: 'Playback', fps: 60, val: {
       tick: Promise.resolve(() => 0),
       reset(){ console.log('Playback reset!') },

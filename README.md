@@ -1,18 +1,15 @@
-# create-svelte
+# Svelte Boids
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+## Outline
 
-## Creating a project
+A rewrite of my ancient [Boids Project](https://github.com/Mr-Helpful/Flocking-Boids) in svelte-kit.
+Makes use of a custom config menu component with somewhat nice playback API.
 
-If you're seeing this, you've probably already done this step. Congrats!
+Has the same features as the previous project:
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
-
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+- cursor following
+- edge avoidance
+- word formation (makes use of a basic stippling algorithm)
 
 ## Developing
 

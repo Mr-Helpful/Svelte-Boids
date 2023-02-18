@@ -8,10 +8,12 @@ export type ConstantSettings = {
 	max_acc: number;
 	view_radius: number;
 	view_angles: number;
+	words_weight: number;
 	dims: V.Vec;
 	target: V.Vec;
-	N: number;
+	word_points: V.Vec[];
 	colour: string;
+	N: number;
 };
 
 export type ConfigOf<O> = {
@@ -27,12 +29,14 @@ export type ConfigSettings = {
 	use_edges: boolean;
 	use_mouse: boolean;
 	use_words: boolean;
+	word_input: string;
 	playback: { tick: Promise<() => number>; reset: () => void };
 };
 
 export type ControlSettings = ConstantSettings & ConfigSettings;
 
-export function initialise(constants: ConstantSettings): BoidData[] {
+export type InitConfig = { min_vel: number; max_vel: number; dims: V.Vec; N: number };
+export function initialise(constants: InitConfig): BoidData[] {
 	const { min_vel: s, max_vel: e, dims, N } = constants;
 	return new Array(N).fill(0).map(() => ({
 		s: V.random([0, 0], dims),
@@ -42,131 +46,131 @@ export function initialise(constants: ConstantSettings): BoidData[] {
 }
 
 export function step(boids: BoidData[], steps: number, settings: ControlSettings) {
-	// console.log(settings.align_weight);
-	return boids.map((b) => update(b, boids, settings)).map((b) => move(b, steps, settings));
+	return boids
+		.map((boid, i): BoidData => {
+			const a = accel(boid, boids, settings.word_points[i] ?? [0, 0], settings);
+			return { ...boid, a };
+		})
+		.map((boid) => move(boid, steps, settings));
 }
 
 /** Updates the acceleration for a single boid */
-function update(boid: BoidData, boids: BoidData[], settings: ControlSettings) {
-	const [near, seen] = select(boid, boids, settings);
+function accel(
+	boid: BoidData,
+	boids: BoidData[],
+	word: V.Vec,
+	{
+		avoid_weight,
+		align_weight,
+		center_weight,
+		mouse_weight,
+		edges_weight,
+		words_weight,
+		use_mouse,
+		use_edges,
+		use_words,
+		target,
+		dims,
+		view_angles,
+		view_radius,
+		max_vel
+	}: ControlSettings
+): V.Vec {
+	const [near, seen] = select(boid, boids, view_radius, view_angles);
 	// we bind all the common variables to be used in finding an acceleration
-	const bAccel = getAcc.bind({}, boid, settings.target, settings);
+	const bAcc = getAcc.bind({}, boid, max_vel);
 
-	type Rules = [BoidData[], AccGenerator, number][];
-	const rules: Rules = [
-		[near, avoid, settings.avoid_weight],
-		[seen, align, settings.align_weight],
-		[seen, toMid, settings.center_weight]
-	];
-	if (settings.use_mouse) rules.push([seen, toPos, settings.mouse_weight]);
-	if (settings.use_edges) rules.push([near, edges, settings.edges_weight]);
+	const accs: V.Vec[] = [];
+	accs.push(bAcc(avoid_weight, avoid(boid, near)));
+	accs.push(bAcc(align_weight, align(seen)));
+	accs.push(bAcc(center_weight, toMid(boid, seen)));
 
-	const accels = rules.map(([boids, rule, weight]) => bAccel(boids, rule, weight));
+	if (use_mouse) accs.push(bAcc(mouse_weight, toPos(boid, target)));
+	if (use_edges) accs.push(bAcc(edges_weight, edges(boid, view_radius, dims)));
+	if (use_words) accs.push(bAcc(words_weight, toPos(boid, word)));
 
-	return { ...boid, a: V.set(V.avg(accels), settings.max_acc) };
+	return V.avg(accs);
 }
 
-type AccGenerator = (
-	boid: BoidData,
-	boids: BoidData[],
-	t: V.Vec,
-	settings: ControlSettings
-) => V.Vec;
-
-/** Gets the acceleration of a single boid from its desired velocity
- * @param {Object} boid - a single boid object
- * @param {Array} boids - the other seen boids
- * @param {Vector} t - a position to target
- * @param {Number} maxV - the maximum velocity the boids can move at
- * @param {Function} f - the function used to determine the boid's desired
- * velocity
- * @param {Number} weight - the weight to assign to the given acceleration
- * @return {Vector} - the acceleration to use
- */
-function getAcc(
-	boid: BoidData,
-	t: V.Vec,
-	settings: ControlSettings,
-	boids: BoidData[],
-	f: AccGenerator,
-	weight: number
-) {
-	const v0 = f(boid, boids, t, settings);
-	const v1 = V.set(v0, settings.max_vel);
-	if (v1[0] == 0 && v1[1] == 0) return v1;
-	return V.mul(V.sub(v1, boid.v), weight);
+/** Gets the acceleration of a single boid from its desired velocity */
+function getAcc(boid: BoidData, max_vel: number, weight: number, acc: V.Vec) {
+	const a0 = V.set(acc, max_vel);
+	if (a0[0] == 0 && a0[1] == 0) return a0;
+	return V.mul(V.sub(a0, boid.v), weight);
 }
 
 /** Selects all the boids that the current boid can "see"
- * @param {Object} boid - a single boid object
- * @param {Array} boids - all other boids
- * @return {Array} - the boids that the current boid can "see"
+ * @param boid - a single boid object
+ * @param boids - all other boids
+ * @return - the boids that the current boid can "see"
  */
 function select(
 	boid: BoidData,
 	boids: BoidData[],
-	settings: ControlSettings
+	view_radius: number,
+	view_angles: number
 ): [BoidData[], BoidData[]] {
 	const near = boids.filter((b) => {
 		const d = V.mag(V.sub(b.s, boid.s));
-		return 0 < d && d <= settings.view_radius;
+		return 0 < d && d <= view_radius;
 	});
 	const seen = near.filter((b) => {
 		const o = V.sub(b.s, boid.s);
-		return V.dot(o, b.v) / (V.mag(o) * V.mag(b.v)) > settings.view_angles;
+		return V.dot(o, b.v) / (V.mag(o) * V.mag(b.v)) > view_angles;
 	});
 	return [near, seen];
 }
 
 /** Gets the nudge required to avoid all other seen boids
- * @param {Object} boid - a single boid object
- * @param {Array} boids - the other seen boids
- * @return {Vector} - the velocity needed to avoid the other boids in one step
+ * @param boid - a single boid object
+ * @param boids - the other seen boids
+ * @return - the velocity needed to avoid the other boids in one step
  */
 function avoid(boid: BoidData, boids: BoidData[]) {
 	return V.avg(boids.map((b) => V.sub(b.s, boid.s)).map((o) => V.set(o, -1 / V.mag(o))));
 }
 
 /** Gets the nudge required to align the boid with other seen boids
- * @param {Object} boid - a single boid object, included to match the layout of
- * other functions
- * @param {Array} boids - the other seen boids
- * @return {Vector} - the velocity needed to align
+ * @param boids - the other seen boids
+ * @return - the velocity needed to align
  */
-function align(_1: BoidData, boids: BoidData[]) {
+function align(boids: BoidData[]) {
 	return V.avg(boids.map((b) => b.v));
 }
 
 /** Gets the nudge required to move the boid to the middle of the pack
- * @param {Object} boid - a single boid object
- * @param {Array} boids - the other seen boids
- * @return {Vector} - the velocity needed to reach the middle in one step
+ * @param boid - a single boid object
+ * @param boids - the other seen boids
+ * @return - the velocity needed to reach the middle in one step
  */
 function toMid(boid: BoidData, boids: BoidData[]) {
-	return toPos(boid, boids, V.avg(boids.map((b) => b.s)));
+	return toPos(boid, V.avg(boids.map((b) => b.s)));
 }
 
 /** Gets the nudge required for the boid to reach a certain position.
- * @param {Object} boid - a single boid object
- * @param {Array} boids - the other seen boids, included to match the layout of
- * other functions
- * @param {Vector} t - the target position to reach
- * @return {Vector} - the velocity needed to reach the position in one step
+ * @param boid - a single boid object
+ * @param t - the target position to reach
+ * @return - the velocity needed to reach the position in one step
  */
-function toPos(boid: BoidData, _: BoidData[], t: V.Vec) {
+function toPos(boid: BoidData, t: V.Vec) {
 	return V.sub(t, boid.s);
 }
 
-function edges(boid: BoidData, _1: BoidData[], _2: V.Vec, settings: ControlSettings): V.Vec {
-	const vBox: V.Vec = [settings.view_radius, settings.view_radius];
-	const vRect = [vBox, V.sub(settings.dims, vBox)];
+function edges(boid: BoidData, view_radius: number, dims: V.Vec): V.Vec {
+	const vBox: V.Vec = [view_radius, view_radius];
+	const vRect = [vBox, V.sub(dims, vBox)];
 	if (V.inside(boid.s, vRect[0], vRect[1])) return [0, 0];
-	return toPos(boid, [], V.div(settings.dims, 2));
+	return toPos(boid, V.div(dims, 2));
 }
 
-function move({ s, v, a }: BoidData, steps: number, settings: ControlSettings) {
-	v = V.lim(V.add(v, V.mul(a, steps)), settings.min_vel, settings.max_vel);
+function move(
+	{ s, v, a }: BoidData,
+	steps: number,
+	{ max_acc, min_vel, max_vel, use_edges, dims }: ControlSettings
+) {
+	a = V.set(a, max_acc);
+	v = V.lim(V.add(v, V.mul(a, steps)), min_vel, max_vel);
 	s = V.add(s, V.mul(v, steps));
-	if (settings.use_edges) s = V.clamp(s, [1, 1], V.sub(settings.dims, [1, 1]));
-	return { s: V.mod(s, settings.dims), v, a };
+	if (use_edges) s = V.clamp(s, [1, 1], V.sub(dims, [1, 1]));
+	return { s: V.mod(s, dims), v, a };
 }

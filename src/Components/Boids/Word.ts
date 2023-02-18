@@ -1,11 +1,11 @@
-import { MaxHeap } from '../_modules/MaxHeap';
-import type { Vec } from '../Components/Boids/Vector';
+import { MaxHeap } from './MaxHeap';
+import type { Vec } from './Vector';
 
 type PDF = { d: number[]; w: number; h: number };
 type FromRGBA = (r: number, g: number, b: number, a: number) => number;
 
-function toPdf(data: ImageData, func: FromRGBA): PDF {
-	const d = data.data;
+function RGBAtoPdf(data: ImageData, func: FromRGBA): PDF {
+	const image = data.data;
 	const pdf = {
 		d: new Array<number>(),
 		w: data.width,
@@ -13,14 +13,14 @@ function toPdf(data: ImageData, func: FromRGBA): PDF {
 	};
 
 	let i = 0;
-	while (i < d.length) {
-		pdf.d.push(func(d[i++], d[i++], d[i++], d[i++]));
+	while (i < image.length) {
+		pdf.d.push(func(image[i++], image[i++], image[i++], image[i++]));
 	}
 	return pdf;
 }
 
-function toCdf(data: ImageData, func: FromRGBA): PDF {
-	const pdf = toPdf(data, func);
+function RGBAtoCdf(data: ImageData, func: FromRGBA): PDF {
+	const pdf = RGBAtoPdf(data, func);
 	const cdf = { d: pdf.d.slice(0), w: pdf.w, h: pdf.h };
 	cdf.d.forEach((v, i) => {
 		if (i >= cdf.w) cdf.d[i] = v + cdf.d[i - cdf.w];
@@ -33,7 +33,8 @@ function toCdf(data: ImageData, func: FromRGBA): PDF {
 
 type Box = [number, number, number, number];
 
-function split([i, j, w, h]: Box): [Box, Box] {
+/** Cuts a box in half, always cutting on the longer side */
+function splitBox([i, j, w, h]: Box): [Box, Box] {
 	if (w > h) {
 		const v = Math.floor(w / 2);
 		return [
@@ -49,7 +50,7 @@ function split([i, j, w, h]: Box): [Box, Box] {
 	}
 }
 
-function cdfArea(cdf: PDF, [i, j, w, h]: Box) {
+function cdfAreaforBox(cdf: PDF, [i, j, w, h]: Box) {
 	const As = [
 		[i, j],
 		[i + w, j],
@@ -70,40 +71,45 @@ type HeapItem = [Box, number];
 
 /** This admittedly isn't the best algorithm,
  * but its flaws will be accounted for in an update rule for the boids
+ *
+ * We repeatedly subdivide a box surrounding the text, each time subdividing
+ * the box with the most black pixels in them, leading to roughly equivalent
+ * areas of pixels covered per point.
  */
-export const splitBased = function splitBased(
+export function splitBased(
 	ctx: CanvasRenderingContext2D,
 	N: number,
-	f: FromRGBA = (r, g, b, a) => a
-) {
+	f: FromRGBA = (_r, _g, _b, a) => a
+): Vec[] {
 	const dims = [ctx.canvas.width, ctx.canvas.height];
 	const data = ctx.getImageData(0, 0, dims[0], dims[1]);
-	const cdf = toCdf(data, f);
+	const cdf = RGBAtoCdf(data, f);
 
 	const box: Box = [0, 0, dims[0], dims[1]];
-	const item: HeapItem = [box, cdfArea(cdf, box)];
+	const item: HeapItem = [box, cdfAreaforBox(cdf, box)];
 	const heap = new MaxHeap((d: HeapItem) => d[1], [item]);
 
 	while (heap.length < N) {
 		const [rect, area] = heap.pop();
-		const [rect1, rect2] = split(rect);
-		const area1 = cdfArea(cdf, rect1);
+		const [rect1, rect2] = splitBox(rect);
+		const area1 = cdfAreaforBox(cdf, rect1);
 
 		heap.push([rect1, area1]);
 		heap.push([rect2, area - area1]);
 	}
 
-	return heap._heap
+	return heap
+		.items()
 		.map((d: HeapItem) => d[0])
 		.map(([i, j, w, h]: Box) => [i + Math.floor(w / 2), j + Math.floor(h / 2)]);
-};
+}
 
-export const getPoints = function getPoints(
+export function getPoints(
 	ctx: CanvasRenderingContext2D,
 	letters: string,
 	N: number,
-	f: FromRGBA
-) {
+	f: FromRGBA = (_r, _g, _b, a) => a
+): Vec[] {
 	// insert thin spaces to separate text slightly
 	letters = letters.split('').join(String.fromCharCode(8201)).toUpperCase();
 
@@ -113,10 +119,10 @@ export const getPoints = function getPoints(
 	ctx.fillText(letters, 20, 20);
 
 	return splitBased(ctx, N, f);
-};
+}
 
 function toCdfMdfs(data: ImageData, func: FromRGBA) {
-	const pdf = toPdf(data, func);
+	const pdf = RGBAtoPdf(data, func);
 	const cdfx = { d: pdf.d.slice(0), w: pdf.w, h: pdf.h };
 	const cdfy = { d: pdf.d.slice(0), w: pdf.w, h: pdf.h };
 
@@ -147,7 +153,7 @@ function toCdfMdfs(data: ImageData, func: FromRGBA) {
 	return [cdfy, mdfx, mdfy];
 }
 
-export const centroidFetcher = function (ctx: CanvasRenderingContext2D, func: FromRGBA) {
+export function centroidFetcher(ctx: CanvasRenderingContext2D, func: FromRGBA) {
 	const [w, h] = [ctx.canvas.width, ctx.canvas.height];
 	const data = ctx.getImageData(0, 0, w, h);
 	const [cdf, mdfx, mdfy] = toCdfMdfs(data, func).map((d) => d.d);
@@ -163,4 +169,4 @@ export const centroidFetcher = function (ctx: CanvasRenderingContext2D, func: Fr
 		const My = mdfy[i0] - mdfy[i1] - mdfy[i2] + mdfy[i3];
 		return [Mx / Area - ix, My / Area - iy];
 	};
-};
+}

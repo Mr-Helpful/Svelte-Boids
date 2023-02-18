@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Time from '../_icons/Time.png';
-  import Play from '../_icons/Play.png';
-  import Skip from '../_icons/Skip.png';
-  import Pause from '../_icons/Pause.png';
+  import Time from '../icons/Time.png';
+  import Play from '../icons/Play.png';
+  import Skip from '../icons/Skip.png';
+  import Pause from '../icons/Pause.png';
 	import Config from '../Components/Config/Config.svelte';
 
   let config = {
